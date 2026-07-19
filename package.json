@@ -1,12 +1,11 @@
 {
   "name": "neon-channel-vr",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "assemble": "node scripts/assemble.mjs",
-    "dev": "npm run assemble && vite",
-    "build": "npm run assemble && vite build",
+    "dev": "vite",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {

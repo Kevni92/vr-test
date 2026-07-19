@@ -3,27 +3,35 @@ import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 import './style.css';
 
-const SHAPES = [
-  { id: 'cube', label: 'Würfel', color: 0x5cc8ff },
-  { id: 'cuboid', label: 'Quader', color: 0x7c9cff },
-  { id: 'sphere', label: 'Kugel', color: 0xff6fb5 },
-  { id: 'cylinder', label: 'Zylinder', color: 0xffb45c },
-  { id: 'pyramid', label: 'Pyramide', color: 0x6fffc1 },
-  { id: 'prism', label: 'Dreiecksprisma', color: 0xc892ff },
-];
+const COURT = {
+  halfWidth: 2.5,
+  floor: 0,
+  ceiling: 3.45,
+  nearEnd: 6.35,
+  farEnd: -6.35,
+  playerZ: 4.35,
+  botZ: -4.35,
+};
+
+const BALL_RADIUS = 0.115;
+const PADDLE = { halfWidth: 0.34, halfHeight: 0.43, halfDepth: 0.075 };
+const PLAYER_LIMIT_X = 1.82;
+const WIN_SCORE = 7;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x091426);
-scene.fog = new THREE.Fog(0x091426, 10, 28);
+scene.background = new THREE.Color(0x030712);
+scene.fog = new THREE.FogExp2(0x071020, 0.045);
 
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 100);
-camera.position.set(0, 1.65, 3.2);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 80);
+camera.position.set(0, 1.65, 0);
 
 const player = new THREE.Group();
+player.name = 'PlayerRig';
+player.position.set(0, 0, COURT.playerZ);
 player.add(camera);
 scene.add(player);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -37,487 +45,648 @@ document.body.appendChild(VRButton.createButton(renderer, {
   optionalFeatures: ['local-floor', 'bounded-floor'],
 }));
 
-scene.add(new THREE.HemisphereLight(0xbad8ff, 0x1f2735, 2.1));
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-keyLight.position.set(4, 8, 3);
+scene.add(new THREE.HemisphereLight(0x9dc8ff, 0x101529, 1.65));
+const keyLight = new THREE.DirectionalLight(0xeaf5ff, 2.4);
+keyLight.position.set(2.5, 5.5, 4);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.camera.left = -6;
+keyLight.shadow.camera.right = 6;
+keyLight.shadow.camera.top = 7;
+keyLight.shadow.camera.bottom = -2;
 scene.add(keyLight);
 
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(30, 30),
-  new THREE.MeshStandardMaterial({ color: 0x132238, roughness: 0.92, metalness: 0.02 }),
+const neonBlue = new THREE.MeshStandardMaterial({
+  color: 0x42d7ff,
+  emissive: 0x087fa5,
+  emissiveIntensity: 2.2,
+  roughness: 0.36,
+  metalness: 0.28,
+});
+const neonPink = new THREE.MeshStandardMaterial({
+  color: 0xff4fa7,
+  emissive: 0xa50d55,
+  emissiveIntensity: 2.1,
+  roughness: 0.36,
+  metalness: 0.25,
+});
+const darkPanel = new THREE.MeshStandardMaterial({
+  color: 0x081326,
+  roughness: 0.72,
+  metalness: 0.38,
+});
+const glassPanel = new THREE.MeshPhysicalMaterial({
+  color: 0x16325b,
+  transparent: true,
+  opacity: 0.27,
+  roughness: 0.18,
+  metalness: 0.2,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+
+function addBox(size, position, material, castShadow = false) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+  mesh.position.set(...position);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return mesh;
+}
+
+function createChannel() {
+  addBox([COURT.halfWidth * 2, 0.08, 12.8], [0, -0.04, 0], darkPanel);
+  addBox([COURT.halfWidth * 2, 0.06, 12.8], [0, COURT.ceiling + 0.03, 0], darkPanel);
+  addBox([0.08, COURT.ceiling, 12.8], [-COURT.halfWidth - 0.04, COURT.ceiling / 2, 0], glassPanel);
+  addBox([0.08, COURT.ceiling, 12.8], [COURT.halfWidth + 0.04, COURT.ceiling / 2, 0], glassPanel);
+  addBox([COURT.halfWidth * 2, COURT.ceiling, 0.08], [0, COURT.ceiling / 2, COURT.farEnd], darkPanel);
+  addBox([COURT.halfWidth * 2, COURT.ceiling, 0.08], [0, COURT.ceiling / 2, COURT.nearEnd], darkPanel);
+
+  const railGeometryZ = new THREE.BoxGeometry(0.025, 0.025, 12.55);
+  const railGeometryX = new THREE.BoxGeometry(COURT.halfWidth * 2, 0.025, 0.025);
+  [-COURT.halfWidth + 0.06, COURT.halfWidth - 0.06].forEach((x) => {
+    [0.08, COURT.ceiling - 0.08].forEach((y) => {
+      const rail = new THREE.Mesh(railGeometryZ, x < 0 ? neonBlue : neonPink);
+      rail.position.set(x, y, 0);
+      scene.add(rail);
+    });
+  });
+
+  for (let z = -5.5; z <= 5.5; z += 1.1) {
+    const floorLine = new THREE.Mesh(railGeometryX, z < 0 ? neonPink : neonBlue);
+    floorLine.position.set(0, 0.012, z);
+    floorLine.material = floorLine.material.clone();
+    floorLine.material.transparent = true;
+    floorLine.material.opacity = 0.28;
+    scene.add(floorLine);
+
+    const ceilingLine = floorLine.clone();
+    ceilingLine.position.y = COURT.ceiling - 0.012;
+    scene.add(ceilingLine);
+  }
+
+  const centerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.72, 0.018, 8, 72),
+    new THREE.MeshBasicMaterial({ color: 0xbcecff, transparent: true, opacity: 0.5 }),
+  );
+  centerRing.rotation.x = Math.PI / 2;
+  centerRing.position.y = 0.018;
+  scene.add(centerRing);
+}
+createChannel();
+
+function createPaddle(color, emissive) {
+  const root = new THREE.Group();
+  root.name = 'Paddle';
+
+  const gripMaterial = new THREE.MeshStandardMaterial({ color: 0x151b28, roughness: 0.48, metalness: 0.65 });
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.046, 0.36, 18), gripMaterial);
+  handle.position.y = 0.01;
+  handle.castShadow = true;
+  root.add(handle);
+
+  const hitSurface = new THREE.Group();
+  hitSurface.name = 'HitSurface';
+  hitSurface.position.set(0, 0.34, -0.08);
+  root.add(hitSurface);
+
+  const rimMaterial = new THREE.MeshStandardMaterial({
+    color,
+    emissive,
+    emissiveIntensity: 1.75,
+    roughness: 0.28,
+    metalness: 0.5,
+  });
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.315, 0.028, 14, 56), rimMaterial);
+  rim.scale.y = 1.25;
+  rim.castShadow = true;
+  hitSurface.add(rim);
+
+  const face = new THREE.Mesh(
+    new THREE.CircleGeometry(0.29, 48),
+    new THREE.MeshPhysicalMaterial({
+      color,
+      emissive,
+      emissiveIntensity: 0.65,
+      transparent: true,
+      opacity: 0.5,
+      roughness: 0.22,
+      metalness: 0.1,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  face.scale.y = 1.25;
+  hitSurface.add(face);
+
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.065, 18, 12), rimMaterial);
+  core.position.y = -0.31;
+  hitSurface.add(core);
+
+  return { root, hitSurface };
+}
+
+const desktopPaddleAnchor = new THREE.Group();
+desktopPaddleAnchor.position.set(0.52, 1.05, -0.8);
+player.add(desktopPaddleAnchor);
+
+const playerPaddle = createPaddle(0x43ddff, 0x0785b0);
+playerPaddle.root.rotation.set(0, 0, -0.08);
+desktopPaddleAnchor.add(playerPaddle.root);
+
+const bot = new THREE.Group();
+bot.position.set(0, 0, COURT.botZ);
+scene.add(bot);
+
+const botBody = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.27, 0.38, 0.78, 24),
+  new THREE.MeshStandardMaterial({ color: 0x401130, emissive: 0x620d42, emissiveIntensity: 0.7, roughness: 0.34, metalness: 0.62 }),
 );
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
+botBody.position.y = 1.05;
+botBody.castShadow = true;
+bot.add(botBody);
 
-const grid = new THREE.GridHelper(30, 60, 0x5b83aa, 0x27415e);
-grid.position.y = 0.002;
-scene.add(grid);
+const botHead = new THREE.Mesh(
+  new THREE.SphereGeometry(0.24, 28, 18),
+  new THREE.MeshStandardMaterial({ color: 0x15192a, roughness: 0.22, metalness: 0.72 }),
+);
+botHead.position.y = 1.63;
+botHead.castShadow = true;
+bot.add(botHead);
 
-const buildObjects = new THREE.Group();
-buildObjects.name = 'BuildObjects';
-scene.add(buildObjects);
+const visor = new THREE.Mesh(
+  new THREE.BoxGeometry(0.32, 0.09, 0.08),
+  neonPink,
+);
+visor.position.set(0, 1.65, 0.205);
+bot.add(visor);
+
+const botPaddle = createPaddle(0xff4fa7, 0x9b0a50);
+botPaddle.root.position.set(0.55, 1.02, 0.36);
+botPaddle.root.rotation.y = Math.PI;
+bot.add(botPaddle.root);
+
+const ballMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0x75dfff,
+  emissiveIntensity: 2.2,
+  roughness: 0.2,
+  metalness: 0.08,
+});
+const ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 28, 18), ballMaterial);
+ball.castShadow = true;
+scene.add(ball);
+
+const ballGlow = new THREE.PointLight(0x52d9ff, 2.2, 2.4, 2);
+ball.add(ballGlow);
+
+const trailPoints = Array.from({ length: 14 }, () => new THREE.Vector3());
+const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+const trail = new THREE.Line(
+  trailGeometry,
+  new THREE.LineBasicMaterial({ color: 0x6fe6ff, transparent: true, opacity: 0.6 }),
+);
+scene.add(trail);
+
+function createScoreboard() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 256;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide, toneMapped: false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 0.82), material);
+  mesh.position.set(0, 2.93, -0.2);
+  scene.add(mesh);
+  return { canvas, texture };
+}
+const scoreboard = createScoreboard();
 
 const state = {
-  shapeIndex: 0,
-  scaleIndex: 1,
-  scales: [0.55, 0.8, 1.1, 1.45],
-  distance: 1.5,
-  previewRotation: new THREE.Euler(0, 0, 0, 'YXZ'),
-  menuOpen: false,
-  menuAxisReady: true,
-  hovered: null,
-  grabbed: null,
-  grabbedController: null,
-  history: [],
+  playerScore: 0,
+  botScore: 0,
+  rally: 0,
+  status: 'Bereit',
+  ballActive: false,
+  serveTimer: 1.25,
+  matchOver: false,
+  hitCooldown: 0,
+  botHitCooldown: 0,
+  playerPaddleConnected: false,
+  botPaddleTarget: new THREE.Vector3(0.55, 1.34, 0.36),
+  botPaddleWorldVelocity: new THREE.Vector3(),
+  playerPaddleWorldVelocity: new THREE.Vector3(),
 };
 
-const raycaster = new THREE.Raycaster();
-raycaster.far = 6;
-const tempMatrix = new THREE.Matrix4();
+const ballVelocity = new THREE.Vector3();
+const previousPlayerPaddlePosition = new THREE.Vector3();
+const previousBotPaddlePosition = new THREE.Vector3();
+const currentPlayerPaddlePosition = new THREE.Vector3();
+const currentBotPaddlePosition = new THREE.Vector3();
 const tempVector = new THREE.Vector3();
 const tempVector2 = new THREE.Vector3();
 const tempQuaternion = new THREE.Quaternion();
+const inverseMatrix = new THREE.Matrix4();
 const clock = new THREE.Clock();
+let audioContext = null;
+let lastWallSound = 0;
 
-function geometryFor(id) {
-  switch (id) {
-    case 'cuboid': return new THREE.BoxGeometry(0.9, 0.45, 0.45);
-    case 'sphere': return new THREE.SphereGeometry(0.42, 32, 20);
-    case 'cylinder': return new THREE.CylinderGeometry(0.36, 0.36, 0.8, 28);
-    case 'pyramid': return new THREE.ConeGeometry(0.52, 0.85, 4);
-    case 'prism': {
-      const shape = new THREE.Shape();
-      shape.moveTo(-0.45, -0.35);
-      shape.lineTo(0.45, -0.35);
-      shape.lineTo(0, 0.45);
-      shape.closePath();
-      const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.55, bevelEnabled: false });
-      geometry.center();
-      return geometry;
-    }
-    default: return new THREE.BoxGeometry(0.65, 0.65, 0.65);
+const scorePlayerEl = document.querySelector('#score-player');
+const scoreBotEl = document.querySelector('#score-bot');
+const statusEl = document.querySelector('#game-status');
+
+function updateScoreboard() {
+  const ctx = scoreboard.canvas.getContext('2d');
+  ctx.clearRect(0, 0, scoreboard.canvas.width, scoreboard.canvas.height);
+  const gradient = ctx.createLinearGradient(0, 0, scoreboard.canvas.width, 0);
+  gradient.addColorStop(0, 'rgba(4, 19, 38, 0.92)');
+  gradient.addColorStop(0.5, 'rgba(11, 16, 34, 0.95)');
+  gradient.addColorStop(1, 'rgba(42, 8, 33, 0.92)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, scoreboard.canvas.width, scoreboard.canvas.height);
+  ctx.strokeStyle = 'rgba(123, 226, 255, 0.7)';
+  ctx.lineWidth = 5;
+  ctx.strokeRect(3, 3, scoreboard.canvas.width - 6, scoreboard.canvas.height - 6);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#91ecff';
+  ctx.font = '700 34px system-ui, sans-serif';
+  ctx.fillText('DU', 275, 54);
+  ctx.fillStyle = '#ff88c2';
+  ctx.fillText('BOT', 749, 54);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '900 112px system-ui, sans-serif';
+  ctx.fillText(String(state.playerScore), 275, 139);
+  ctx.fillText(String(state.botScore), 749, 139);
+  ctx.fillStyle = '#c9dbef';
+  ctx.font = '650 30px system-ui, sans-serif';
+  ctx.fillText(`${state.status} · Rally ${state.rally}`, 512, 225);
+  scoreboard.texture.needsUpdate = true;
+
+  scorePlayerEl.textContent = state.playerScore;
+  scoreBotEl.textContent = state.botScore;
+  statusEl.textContent = `${state.status} · Rally ${state.rally}`;
+}
+
+function sound(frequency, duration = 0.06, volume = 0.05) {
+  try {
+    audioContext ??= new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration);
+  } catch {
+    // Audio is optional and may be blocked before the first interaction.
   }
 }
 
-function materialFor(shape, preview = false) {
-  return new THREE.MeshStandardMaterial({
-    color: shape.color,
-    roughness: 0.52,
-    metalness: 0.08,
-    transparent: preview,
-    opacity: preview ? 0.42 : 1,
-    depthWrite: !preview,
-    emissive: 0x000000,
-  });
+function resetBall(delay = 1.2) {
+  state.ballActive = false;
+  state.serveTimer = delay;
+  state.rally = 0;
+  ball.position.set(0, 1.5, 0);
+  ballVelocity.set(0, 0, 0);
+  trailPoints.forEach((point) => point.copy(ball.position));
 }
 
-function createShapeMesh(shape, preview = false) {
-  const mesh = new THREE.Mesh(geometryFor(shape.id), materialFor(shape, preview));
-  mesh.castShadow = !preview;
-  mesh.receiveShadow = !preview;
-  mesh.userData.buildObject = !preview;
-  mesh.userData.shapeId = shape.id;
-  return mesh;
+function launchServe() {
+  const direction = (state.playerScore + state.botScore) % 2 === 0 ? 1 : -1;
+  ball.position.set(THREE.MathUtils.randFloatSpread(0.45), THREE.MathUtils.randFloat(1.25, 1.9), 0);
+  ballVelocity.set(
+    THREE.MathUtils.randFloatSpread(1.15),
+    THREE.MathUtils.randFloatSpread(0.55),
+    direction * THREE.MathUtils.randFloat(4.7, 5.25),
+  );
+  state.ballActive = true;
+  state.status = 'Spielen';
+  sound(520, 0.08, 0.045);
+  updateScoreboard();
 }
 
-let preview = createShapeMesh(SHAPES[state.shapeIndex], true);
-preview.name = 'Preview';
-scene.add(preview);
-
-function replacePreview() {
-  const next = createShapeMesh(SHAPES[state.shapeIndex], true);
-  next.position.copy(preview.position);
-  next.quaternion.copy(preview.quaternion);
-  next.scale.copy(preview.scale);
-  scene.remove(preview);
-  preview.geometry.dispose();
-  preview.material.dispose();
-  preview = next;
-  preview.name = 'Preview';
-  scene.add(preview);
-  updateDesktopShapeSelection();
+function restartMatch() {
+  state.playerScore = 0;
+  state.botScore = 0;
+  state.matchOver = false;
+  state.status = 'Neues Match';
+  resetBall(1.1);
+  updateScoreboard();
 }
 
-function createTextTexture(text, color = '#ffffff', background = 'rgba(0,0,0,0)') {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
-  const context = canvas.getContext('2d');
-  context.fillStyle = background;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = color;
-  context.font = '700 46px system-ui, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(text, canvas.width / 2, canvas.height / 2);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.needsUpdate = true;
-  return texture;
-}
+function scorePoint(side) {
+  if (side === 'player') state.playerScore += 1;
+  else state.botScore += 1;
 
-function createLabel(text, width = 0.36, height = 0.09) {
-  const material = new THREE.MeshBasicMaterial({
-    map: createTextTexture(text),
-    transparent: true,
-    depthTest: false,
-    toneMapped: false,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
-  mesh.renderOrder = 20;
-  return mesh;
-}
-
-const menu = new THREE.Group();
-menu.visible = false;
-menu.name = 'BuildMenu';
-scene.add(menu);
-
-const menuBackground = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.36, 0.72),
-  new THREE.MeshBasicMaterial({ color: 0x081422, transparent: true, opacity: 0.94, depthTest: false }),
-);
-menuBackground.position.z = -0.025;
-menuBackground.renderOrder = 10;
-menu.add(menuBackground);
-
-const titleLabel = createLabel('BAUMENÜ · STICK WÄHLT · R2 BESTÄTIGT', 1.06, 0.085);
-titleLabel.position.set(0, 0.27, 0);
-menu.add(titleLabel);
-
-const menuPanels = SHAPES.map((shape, index) => {
-  const group = new THREE.Group();
-  const column = index % 3;
-  const row = Math.floor(index / 3);
-  group.position.set((column - 1) * 0.4, 0.08 - row * 0.28, 0);
-
-  const panelMaterial = new THREE.MeshBasicMaterial({
-    color: 0x1a2d45,
-    transparent: true,
-    opacity: 0.96,
-    depthTest: false,
-  });
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.23), panelMaterial);
-  panel.renderOrder = 11;
-  group.add(panel);
-
-  const icon = createShapeMesh(shape, true);
-  icon.material.transparent = false;
-  icon.material.opacity = 1;
-  icon.material.depthTest = false;
-  icon.scale.setScalar(0.16);
-  icon.position.y = 0.025;
-  icon.renderOrder = 12;
-  group.add(icon);
-
-  const label = createLabel(shape.label, 0.3, 0.06);
-  label.position.y = -0.072;
-  group.add(label);
-
-  menu.add(group);
-  return { group, panelMaterial };
-});
-
-function refreshMenu() {
-  menu.visible = state.menuOpen;
-  menuPanels.forEach(({ group, panelMaterial }, index) => {
-    const selected = index === state.shapeIndex;
-    panelMaterial.color.setHex(selected ? 0x176d91 : 0x1a2d45);
-    group.scale.setScalar(selected ? 1.08 : 1);
-  });
-}
-
-function toggleMenu(force) {
-  state.menuOpen = typeof force === 'boolean' ? force : !state.menuOpen;
-  refreshMenu();
-}
-
-function changeShape(delta) {
-  state.shapeIndex = (state.shapeIndex + delta + SHAPES.length) % SHAPES.length;
-  replacePreview();
-  refreshMenu();
-}
-
-function cycleScale() {
-  state.scaleIndex = (state.scaleIndex + 1) % state.scales.length;
-}
-
-function placePreview() {
-  if (!preview.visible) return;
-  const object = createShapeMesh(SHAPES[state.shapeIndex]);
-  object.position.copy(preview.position);
-  object.quaternion.copy(preview.quaternion);
-  object.scale.copy(preview.scale);
-  object.userData.createdAt = performance.now();
-  buildObjects.add(object);
-  state.history.push(object);
-}
-
-function undoLast() {
-  while (state.history.length) {
-    const object = state.history.pop();
-    if (object.parent) {
-      object.parent.remove(object);
-      object.geometry.dispose();
-      object.material.dispose();
-      if (state.hovered === object) state.hovered = null;
-      return;
-    }
+  const lead = Math.abs(state.playerScore - state.botScore);
+  const winner = state.playerScore >= WIN_SCORE || state.botScore >= WIN_SCORE;
+  if (winner && lead >= 2) {
+    state.matchOver = true;
+    state.ballActive = false;
+    state.status = state.playerScore > state.botScore ? 'Sieg! A für Neustart' : 'Bot gewinnt · A für Neustart';
+    sound(state.playerScore > state.botScore ? 880 : 180, 0.35, 0.08);
+  } else {
+    state.status = side === 'player' ? 'Punkt für dich' : 'Punkt für den Bot';
+    resetBall(1.35);
+    sound(side === 'player' ? 720 : 220, 0.16, 0.065);
   }
+  updateScoreboard();
 }
 
-function removeObject(object) {
-  if (!object || !object.userData.buildObject || object === state.grabbed) return;
-  object.parent?.remove(object);
-  object.geometry.dispose();
-  object.material.dispose();
-  state.history = state.history.filter((entry) => entry !== object);
-  if (state.hovered === object) state.hovered = null;
+function pulseController(record, strength = 0.55, duration = 55) {
+  const gamepad = record?.inputSource?.gamepad;
+  const actuator = gamepad?.hapticActuators?.[0] ?? gamepad?.vibrationActuator;
+  actuator?.pulse?.(strength, duration).catch?.(() => {});
 }
 
-function setHovered(next) {
-  if (state.hovered === next) return;
-  if (state.hovered?.material?.emissive) state.hovered.material.emissive.setHex(0x000000);
-  state.hovered = next;
-  if (state.hovered?.material?.emissive) state.hovered.material.emissive.setHex(0x17415a);
-}
-
-function rayFromController(controller) {
-  tempMatrix.identity().extractRotation(controller.matrixWorld);
-  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-}
-
-function grabHovered(controller) {
-  if (!state.hovered || state.grabbed) return;
-  state.grabbed = state.hovered;
-  state.grabbedController = controller;
-  controller.attach(state.grabbed);
-  setHovered(null);
-}
-
-function releaseGrab() {
-  if (!state.grabbed) return;
-  buildObjects.attach(state.grabbed);
-  state.grabbed = null;
-  state.grabbedController = null;
+function getStickAxes(gamepad) {
+  if (!gamepad?.axes?.length) return { x: 0, y: 0 };
+  if (gamepad.axes.length >= 4) return { x: gamepad.axes[2] ?? 0, y: gamepad.axes[3] ?? 0 };
+  return { x: gamepad.axes[0] ?? 0, y: gamepad.axes[1] ?? 0 };
 }
 
 const controllerModelFactory = new XRControllerModelFactory();
 const controllers = [];
+let rightControllerRecord = null;
+
+function attachPlayerPaddle(grip) {
+  grip.add(playerPaddle.root);
+  playerPaddle.root.position.set(0, 0, -0.11);
+  playerPaddle.root.rotation.set(0, 0, -0.08);
+  state.playerPaddleConnected = true;
+}
+
+function restoreDesktopPaddle() {
+  desktopPaddleAnchor.add(playerPaddle.root);
+  playerPaddle.root.position.set(0, 0, 0);
+  playerPaddle.root.rotation.set(0, 0, -0.08);
+  state.playerPaddleConnected = false;
+}
 
 function addController(index) {
   const target = renderer.xr.getController(index);
   const grip = renderer.xr.getControllerGrip(index);
-  const ray = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]),
-    new THREE.LineBasicMaterial({ color: 0x77ddff, transparent: true, opacity: 0.75 }),
-  );
-  ray.name = 'PointerRay';
-  ray.scale.z = 2;
-  target.add(ray);
-
   grip.add(controllerModelFactory.createControllerModel(grip));
   player.add(target, grip);
 
-  const record = { target, grip, inputSource: null, previousButtons: [], handedness: 'none' };
+  const record = { target, grip, inputSource: null, handedness: 'none', previousButtons: [] };
   controllers.push(record);
 
   target.addEventListener('connected', (event) => {
     record.inputSource = event.data;
     record.handedness = event.data.handedness;
-    ray.visible = event.data.targetRayMode === 'tracked-pointer';
+    if (record.handedness === 'right') {
+      rightControllerRecord = record;
+      attachPlayerPaddle(grip);
+    }
   });
+
   target.addEventListener('disconnected', () => {
+    if (record.handedness === 'right') {
+      rightControllerRecord = null;
+      restoreDesktopPaddle();
+    }
     record.inputSource = null;
+    record.handedness = 'none';
     record.previousButtons = [];
-    if (state.grabbedController === target) releaseGrab();
-  });
-  target.addEventListener('selectstart', () => {
-    if (record.handedness !== 'right') return;
-    if (state.menuOpen) toggleMenu(false);
-    else placePreview();
-  });
-  target.addEventListener('squeezestart', () => {
-    if (record.handedness === 'right') grabHovered(target);
-  });
-  target.addEventListener('squeezeend', () => {
-    if (state.grabbedController === target) releaseGrab();
   });
 }
-
 addController(0);
 addController(1);
 
-function getController(handedness) {
-  return controllers.find((record) => record.handedness === handedness && record.inputSource);
-}
-
-function buttonPressed(gamepad, index) {
-  return Boolean(gamepad.buttons[index]?.pressed);
-}
-
-function risingEdge(record, gamepad, index) {
-  return buttonPressed(gamepad, index) && !record.previousButtons[index];
-}
-
-function thumbstickAxes(gamepad) {
-  if (gamepad.axes.length >= 4) return [gamepad.axes[2], gamepad.axes[3]];
-  return [gamepad.axes[0] ?? 0, gamepad.axes[1] ?? 0];
-}
-
 function updateControllerInput(delta) {
-  for (const record of controllers) {
+  controllers.forEach((record) => {
     const gamepad = record.inputSource?.gamepad;
-    if (!gamepad) continue;
-
-    const [stickX, stickY] = thumbstickAxes(gamepad);
-    if (record.handedness === 'right') {
-      const hasFaceButtons = gamepad.buttons.length > 4;
-      const menuButton = hasFaceButtons ? 4 : 3;
-      if (risingEdge(record, gamepad, menuButton)) toggleMenu();
-      if (risingEdge(record, gamepad, 5)) cycleScale();
-
-      if (state.menuOpen) {
-        if (Math.abs(stickX) < 0.35) state.menuAxisReady = true;
-        if (state.menuAxisReady && Math.abs(stickX) > 0.7) {
-          changeShape(stickX > 0 ? 1 : -1);
-          state.menuAxisReady = false;
-        }
-      } else if (state.grabbed) {
-        state.grabbed.rotateY(-stickX * delta * 2.1);
-        state.grabbed.rotateX(-stickY * delta * 2.1);
-      } else {
-        state.previewRotation.y -= stickX * delta * 1.9;
-        state.distance = THREE.MathUtils.clamp(state.distance - stickY * delta * 1.35, 0.45, 4.5);
-      }
-    }
+    if (!gamepad) return;
+    const buttons = gamepad.buttons;
+    const wasPressed = (index) => Boolean(record.previousButtons[index]);
+    const isPressed = (index) => Boolean(buttons[index]?.pressed);
 
     if (record.handedness === 'left') {
-      if (risingEdge(record, gamepad, 4)) removeObject(state.hovered);
-      if (risingEdge(record, gamepad, 5)) undoLast();
-
-      const deadzone = 0.18;
-      const moveX = Math.abs(stickX) > deadzone ? stickX : 0;
-      const moveZ = Math.abs(stickY) > deadzone ? stickY : 0;
-      if (moveX || moveZ) {
-        const activeCamera = renderer.xr.getCamera(camera);
-        activeCamera.getWorldDirection(tempVector);
-        tempVector.y = 0;
-        tempVector.normalize();
-        tempVector2.crossVectors(tempVector, camera.up).normalize();
-        player.position.addScaledVector(tempVector, -moveZ * delta * 1.5);
-        player.position.addScaledVector(tempVector2, -moveX * delta * 1.5);
-      }
+      const stick = getStickAxes(gamepad);
+      const input = Math.abs(stick.x) > 0.12 ? stick.x : 0;
+      player.position.x = THREE.MathUtils.clamp(player.position.x + input * 2.35 * delta, -PLAYER_LIMIT_X, PLAYER_LIMIT_X);
     }
 
-    record.previousButtons = gamepad.buttons.map((button) => button.pressed);
+    if (record.handedness === 'right' && isPressed(3) && !wasPressed(3)) {
+      restartMatch();
+    }
+
+    record.previousButtons = buttons.map((button) => button.pressed);
+  });
+}
+
+function updatePaddleVelocities(delta) {
+  playerPaddle.hitSurface.getWorldPosition(currentPlayerPaddlePosition);
+  botPaddle.hitSurface.getWorldPosition(currentBotPaddlePosition);
+
+  if (delta > 0.0001) {
+    state.playerPaddleWorldVelocity.subVectors(currentPlayerPaddlePosition, previousPlayerPaddlePosition).divideScalar(delta);
+    state.botPaddleWorldVelocity.subVectors(currentBotPaddlePosition, previousBotPaddlePosition).divideScalar(delta);
+    if (state.playerPaddleWorldVelocity.length() > 10) state.playerPaddleWorldVelocity.setLength(10);
+    if (state.botPaddleWorldVelocity.length() > 8) state.botPaddleWorldVelocity.setLength(8);
+  }
+
+  previousPlayerPaddlePosition.copy(currentPlayerPaddlePosition);
+  previousBotPaddlePosition.copy(currentBotPaddlePosition);
+}
+
+function predictBotTarget() {
+  let targetX = 0.5;
+  let targetY = 1.38;
+  if (state.ballActive && ballVelocity.z < -0.2) {
+    const paddleZ = COURT.botZ + 0.36;
+    const travelTime = Math.max(0, (paddleZ - ball.position.z) / ballVelocity.z);
+    targetX = ball.position.x + ballVelocity.x * travelTime;
+    targetY = ball.position.y + ballVelocity.y * travelTime;
+    const error = Math.sin(performance.now() * 0.0017 + state.rally) * 0.13;
+    targetX += error;
+    targetY += error * 0.45;
+  }
+  state.botPaddleTarget.set(
+    THREE.MathUtils.clamp(targetX, -1.72, 1.72),
+    THREE.MathUtils.clamp(targetY - 0.34, 0.55, 2.25),
+    0.36,
+  );
+}
+
+function updateBot(delta) {
+  predictBotTarget();
+  const response = state.ballActive && ballVelocity.z < 0 ? 4.8 : 2.1;
+  botPaddle.root.position.lerp(state.botPaddleTarget, 1 - Math.exp(-response * delta));
+  botPaddle.root.rotation.y = Math.PI + THREE.MathUtils.clamp(ballVelocity.x * 0.035, -0.24, 0.24);
+  const bodyOffset = botPaddle.root.position.x * 0.42;
+  botBody.position.x = THREE.MathUtils.damp(botBody.position.x, bodyOffset, 2.4, delta);
+  botHead.position.x = THREE.MathUtils.damp(botHead.position.x, bodyOffset, 2.8, delta);
+  visor.position.x = botHead.position.x;
+  botBody.rotation.z = THREE.MathUtils.damp(botBody.rotation.z, -botPaddle.root.position.x * 0.06, 3.2, delta);
+}
+
+function collideWithPaddle(paddleSurface, paddleVelocity, side) {
+  const cooldownKey = side === 'player' ? 'hitCooldown' : 'botHitCooldown';
+  if (state[cooldownKey] > 0) return false;
+  if (side === 'player' && ballVelocity.z <= 0) return false;
+  if (side === 'bot' && ballVelocity.z >= 0) return false;
+
+  paddleSurface.updateWorldMatrix(true, false);
+  inverseMatrix.copy(paddleSurface.matrixWorld).invert();
+  const localBall = tempVector.copy(ball.position).applyMatrix4(inverseMatrix);
+  const ellipse = (localBall.x * localBall.x) / ((PADDLE.halfWidth + BALL_RADIUS) ** 2)
+    + (localBall.y * localBall.y) / ((PADDLE.halfHeight + BALL_RADIUS) ** 2);
+  if (ellipse > 1 || Math.abs(localBall.z) > PADDLE.halfDepth + BALL_RADIUS) return false;
+
+  paddleSurface.getWorldQuaternion(tempQuaternion);
+  const normal = tempVector2.set(0, 0, 1).applyQuaternion(tempQuaternion).normalize();
+  if (side === 'player' && normal.z > 0) normal.negate();
+  if (side === 'bot' && normal.z < 0) normal.negate();
+
+  const relativeVelocity = ballVelocity.clone().sub(paddleVelocity);
+  const approach = relativeVelocity.dot(normal);
+  if (approach < 0) relativeVelocity.addScaledVector(normal, -2 * approach);
+  ballVelocity.copy(relativeVelocity).addScaledVector(paddleVelocity, side === 'player' ? 0.52 : 0.2);
+
+  ballVelocity.x += localBall.x * 3.1;
+  ballVelocity.y += localBall.y * 2.25;
+  const minimumForwardSpeed = Math.min(8.8, 5.2 + state.rally * 0.12);
+  if (side === 'player') ballVelocity.z = -Math.max(Math.abs(ballVelocity.z), minimumForwardSpeed);
+  else ballVelocity.z = Math.max(Math.abs(ballVelocity.z), minimumForwardSpeed * 0.96);
+
+  const speed = THREE.MathUtils.clamp(ballVelocity.length(), 5.2, 10.8);
+  ballVelocity.setLength(speed);
+  ball.position.addScaledVector(normal, BALL_RADIUS + 0.035);
+  state[cooldownKey] = 0.14;
+  state.rally += 1;
+  state.status = side === 'player' ? 'Starker Return' : 'Bot-Return';
+  ballMaterial.emissive.setHex(side === 'player' ? 0x22cfff : 0xff2a95);
+  ballGlow.color.setHex(side === 'player' ? 0x42d7ff : 0xff4fa7);
+  sound(side === 'player' ? 660 : 440, 0.055, 0.055);
+  if (side === 'player') pulseController(rightControllerRecord);
+  updateScoreboard();
+  return true;
+}
+
+function updateTrail() {
+  for (let index = trailPoints.length - 1; index > 0; index -= 1) {
+    trailPoints[index].lerp(trailPoints[index - 1], 0.68);
+  }
+  trailPoints[0].copy(ball.position);
+  trailGeometry.setFromPoints(trailPoints);
+}
+
+function wallBounce(axis, boundary, direction) {
+  ball.position[axis] = boundary;
+  ballVelocity[axis] = Math.abs(ballVelocity[axis]) * direction * 0.96;
+  const now = performance.now();
+  if (now - lastWallSound > 70) {
+    sound(290, 0.035, 0.025);
+    lastWallSound = now;
   }
 }
 
-function updatePreview() {
-  preview.visible = !state.menuOpen && !state.grabbed;
-  if (!preview.visible) return;
-
-  const right = getController('right');
-  if (right) {
-    rayFromController(right.target);
-    preview.position.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, state.distance);
-  } else {
-    camera.getWorldPosition(tempVector);
-    camera.getWorldDirection(tempVector2);
-    preview.position.copy(tempVector).addScaledVector(tempVector2, 2.1);
-  }
-
-  preview.quaternion.setFromEuler(state.previewRotation);
-  preview.scale.setScalar(state.scales[state.scaleIndex]);
-}
-
-function updateHover() {
-  if (state.menuOpen || state.grabbed) {
-    setHovered(null);
+function simulateBall(delta) {
+  if (!state.ballActive) {
+    if (!state.matchOver) {
+      state.serveTimer -= delta;
+      state.status = state.serveTimer > 0.75 ? 'Bereit' : 'Serve';
+      if (state.serveTimer <= 0) launchServe();
+    }
     return;
   }
-  const right = getController('right');
-  if (!right) return;
-  rayFromController(right.target);
-  const intersections = raycaster.intersectObjects(buildObjects.children, false);
-  setHovered(intersections[0]?.object ?? null);
-}
 
-function updateMenuPose() {
-  if (!state.menuOpen) return;
-  const activeCamera = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera;
-  activeCamera.getWorldPosition(tempVector);
-  activeCamera.getWorldDirection(tempVector2);
-  activeCamera.getWorldQuaternion(tempQuaternion);
-  menu.position.copy(tempVector).addScaledVector(tempVector2, 1.15);
-  menu.position.y -= 0.08;
-  menu.quaternion.copy(tempQuaternion);
-}
+  const maxTravel = Math.max(BALL_RADIUS * 0.7, 0.05);
+  const steps = THREE.MathUtils.clamp(Math.ceil(ballVelocity.length() * delta / maxTravel), 1, 8);
+  const stepDelta = delta / steps;
 
-function updateDesktopShapeSelection() {
-  const select = document.querySelector('#shape-select');
-  if (select) select.value = SHAPES[state.shapeIndex].id;
-}
+  for (let step = 0; step < steps; step += 1) {
+    ball.position.addScaledVector(ballVelocity, stepDelta);
 
-const shapeSelect = document.querySelector('#shape-select');
-for (const shape of SHAPES) {
-  const option = document.createElement('option');
-  option.value = shape.id;
-  option.textContent = shape.label;
-  shapeSelect.appendChild(option);
-}
-shapeSelect.addEventListener('change', () => {
-  const index = SHAPES.findIndex((shape) => shape.id === shapeSelect.value);
-  if (index >= 0) {
-    state.shapeIndex = index;
-    replacePreview();
+    const xLimit = COURT.halfWidth - BALL_RADIUS;
+    if (ball.position.x > xLimit) wallBounce('x', xLimit, -1);
+    if (ball.position.x < -xLimit) wallBounce('x', -xLimit, 1);
+
+    const topLimit = COURT.ceiling - BALL_RADIUS;
+    const bottomLimit = COURT.floor + BALL_RADIUS;
+    if (ball.position.y > topLimit) wallBounce('y', topLimit, -1);
+    if (ball.position.y < bottomLimit) wallBounce('y', bottomLimit, 1);
+
+    collideWithPaddle(playerPaddle.hitSurface, state.playerPaddleWorldVelocity, 'player');
+    collideWithPaddle(botPaddle.hitSurface, state.botPaddleWorldVelocity, 'bot');
+
+    if (ball.position.z > COURT.nearEnd - 0.25) {
+      scorePoint('bot');
+      break;
+    }
+    if (ball.position.z < COURT.farEnd + 0.25) {
+      scorePoint('player');
+      break;
+    }
   }
-});
-document.querySelector('#rotate-left').addEventListener('click', () => { state.previewRotation.y += Math.PI / 8; });
-document.querySelector('#rotate-right').addEventListener('click', () => { state.previewRotation.y -= Math.PI / 8; });
-document.querySelector('#scale-button').addEventListener('click', cycleScale);
-document.querySelector('#place-button').addEventListener('click', placePreview);
-updateDesktopShapeSelection();
 
-addEventListener('keydown', (event) => {
-  if (event.repeat) return;
-  if (event.code === 'KeyM') toggleMenu();
-  if (event.code === 'ArrowRight') changeShape(1);
-  if (event.code === 'ArrowLeft') changeShape(-1);
-  if (event.code === 'Space') placePreview();
-  if (event.code === 'KeyQ') state.previewRotation.y += Math.PI / 12;
-  if (event.code === 'KeyE') state.previewRotation.y -= Math.PI / 12;
-  if (event.code === 'KeyR') cycleScale();
-  if (event.code === 'KeyZ') undoLast();
+  ballMaterial.emissive.lerp(new THREE.Color(0x75dfff), 0.035);
+  ballGlow.color.lerp(new THREE.Color(0x52d9ff), 0.035);
+}
+
+const desktopPointer = { x: 0.52, y: 1.35 };
+window.addEventListener('pointermove', (event) => {
+  const normalizedX = event.clientX / innerWidth;
+  const normalizedY = event.clientY / innerHeight;
+  desktopPointer.x = THREE.MathUtils.lerp(-1.55, 1.55, normalizedX);
+  desktopPointer.y = THREE.MathUtils.lerp(2.35, 0.65, normalizedY);
 });
 
-addEventListener('resize', () => {
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'KeyA' || event.code === 'ArrowLeft') {
+    player.position.x = Math.max(-PLAYER_LIMIT_X, player.position.x - 0.18);
+  }
+  if (event.code === 'KeyD' || event.code === 'ArrowRight') {
+    player.position.x = Math.min(PLAYER_LIMIT_X, player.position.x + 0.18);
+  }
+  if (event.code === 'KeyR' || event.code === 'Space') restartMatch();
+});
+
+document.querySelector('#restart-button').addEventListener('click', restartMatch);
+
+renderer.xr.addEventListener('sessionstart', () => {
+  document.body.classList.add('xr-active');
+  audioContext?.resume?.();
+  restartMatch();
+});
+renderer.xr.addEventListener('sessionend', () => {
+  document.body.classList.remove('xr-active');
+  restoreDesktopPaddle();
+});
+
+window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
 
-renderer.xr.addEventListener('sessionstart', () => {
-  document.querySelector('.intro').style.display = 'none';
-  document.querySelector('#desktop-toolbar').style.display = 'none';
-});
-renderer.xr.addEventListener('sessionend', () => {
-  document.querySelector('.intro').style.display = '';
-  document.querySelector('#desktop-toolbar').style.display = '';
-  toggleMenu(false);
-  releaseGrab();
-});
+resetBall(1.3);
+updateScoreboard();
+playerPaddle.hitSurface.getWorldPosition(previousPlayerPaddlePosition);
+botPaddle.hitSurface.getWorldPosition(previousBotPaddlePosition);
 
 renderer.setAnimationLoop(() => {
-  const delta = Math.min(clock.getDelta(), 0.05);
+  const delta = Math.min(clock.getDelta(), 0.035);
   updateControllerInput(delta);
-  updatePreview();
-  updateHover();
-  updateMenuPose();
+
+  if (!renderer.xr.isPresenting) {
+    desktopPaddleAnchor.position.x = THREE.MathUtils.damp(desktopPaddleAnchor.position.x, desktopPointer.x - player.position.x, 11, delta);
+    desktopPaddleAnchor.position.y = THREE.MathUtils.damp(desktopPaddleAnchor.position.y, desktopPointer.y, 11, delta);
+  }
+
+  updateBot(delta);
+  scene.updateMatrixWorld(true);
+  updatePaddleVelocities(delta);
+  state.hitCooldown = Math.max(0, state.hitCooldown - delta);
+  state.botHitCooldown = Math.max(0, state.botHitCooldown - delta);
+  simulateBall(delta);
+  updateTrail();
   renderer.render(scene, camera);
 });

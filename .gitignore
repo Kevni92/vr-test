@@ -1,4 +1,5 @@
 node_modules/
 dist/
+src/main-v2.js
 .DS_Store
 *.local

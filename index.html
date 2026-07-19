@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09111f" />
+    <title>Quest 3 WebXR Baukasten</title>
+  </head>
+  <body>
+    <main id="app">
+      <section class="intro" aria-label="Projektinformationen">
+        <p class="eyebrow">Three.js · WebXR · Meta Quest 3</p>
+        <h1>VR Mini-Baukasten</h1>
+        <p>Starte VR und baue mit den Quest-Controllern frei im Raum.</p>
+        <div class="controls">
+          <span><b>A</b> Menü</span>
+          <span><b>R2</b> Platzieren</span>
+          <span><b>Grip</b> Greifen</span>
+          <span><b>Stick</b> Drehen / Abstand</span>
+          <span><b>B</b> Größe</span>
+          <span><b>X</b> Löschen</span>
+          <span><b>Y</b> Rückgängig</span>
+        </div>
+      </section>
+
+      <section id="desktop-toolbar" class="toolbar" aria-label="Desktop-Teststeuerung">
+        <label>
+          Form
+          <select id="shape-select"></select>
+        </label>
+        <button id="rotate-left" type="button">↺ Drehen</button>
+        <button id="rotate-right" type="button">↻ Drehen</button>
+        <button id="scale-button" type="button">Größe</button>
+        <button id="place-button" type="button" class="primary">Platzieren</button>
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

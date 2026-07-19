@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#050916" />
-    <meta name="description" content="Neon Channel – ein modernes WebXR-Ping-Pong-Spiel für Meta Quest 3." />
+    <meta name="theme-color" content="#030713" />
+    <meta name="description" content="Neon Channel – futuristisches WebXR-Ping-Pong für Meta Quest 3." />
     <title>Neon Channel VR Ping-Pong</title>
   </head>
   <body>
@@ -12,22 +12,25 @@
       <section class="intro" aria-label="Spielinformationen">
         <p class="eyebrow">Three.js · WebXR · Meta Quest 3</p>
         <h1>Neon Channel</h1>
-        <p>VR-Ping-Pong in einem futuristischen Kanal. Bewege dich seitlich und schlage den Ball mit dem rechten Schläger zurück.</p>
+        <p>VR-Ping-Pong in einem futuristischen Neonkanal mit KI-Gegner, Starfield und dynamischem Balltempo.</p>
         <div class="controls">
           <span><b>Linker Stick</b> links / rechts</span>
           <span><b>Rechte Hand</b> Schläger</span>
-          <span><b>A</b> Match neu starten</span>
-          <span><b>Ziel</b> 7 Punkte, zwei Punkte Vorsprung</span>
+          <span><b>R2 halten</b> Schläger justieren</span>
+          <span><b>A</b> Pause / Einstellungen</span>
         </div>
       </section>
 
       <section class="score-hud" aria-label="Spielstand">
         <div><small>DU</small><strong id="score-player">0</strong></div>
-        <p id="game-status">Bereit · Rally 0</p>
+        <p id="game-status">Startmenü · Rally 0</p>
         <div><small>BOT</small><strong id="score-bot">0</strong></div>
       </section>
 
-      <button id="restart-button" class="restart" type="button">Match neu starten</button>
+      <div class="desktop-actions">
+        <button id="pause-button" class="pause" type="button">Spiel starten</button>
+        <button id="restart-button" class="restart" type="button">Match neu starten</button>
+      </div>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>

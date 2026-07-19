@@ -1,22 +1,22 @@
 # Neon Channel VR
 
-Ein modernes VR-Ping-Pong-Spiel für **Meta Quest 3**, umgesetzt mit **Three.js**, **WebXR** und Vite. Das Spiel läuft direkt im Meta Quest Browser und wird automatisch über GitHub Pages veröffentlicht.
-
-## Spielidee
-
-Du stehst in einem futuristischen, rechteckigen Kanal. Gegenüber befindet sich in etwa 8,7 Metern Entfernung ein KI-Bot mit eigenem Schläger. Der Ball fliegt frei durch den Kanal und prallt an Seitenwänden, Boden und Decke ab.
+Ein futuristisches VR-Ping-Pong-Spiel für **Meta Quest 3**, umgesetzt mit **Three.js**, **WebXR** und Vite. Das Spiel läuft direkt im Meta Quest Browser und wird automatisch über GitHub Pages veröffentlicht.
 
 ## Funktionen
 
-- Seitliche Bewegung des Spielers; keine künstliche Vorwärts-, Höhen- oder Tiefenbewegung
+- Rechteckiger Sci-Fi-Kanal mit Neonrahmen, transparenten Seitenflächen und animiertem Energieportal
+- Dezentes Starfield außerhalb des Spielfelds
+- Seitliche Bewegung; keine künstliche Vorwärts- oder Höhenbewegung
 - VR-Schläger am rechten Quest-Controller
-- Ballkollisionen mit Position, Ausrichtung und Geschwindigkeit des Schlägers
-- Haptisches Feedback beim eigenen Treffer
-- KI-Gegner mit Reaktionszeit, Vorhersage und leichter Ungenauigkeit
-- Zunehmendes Balltempo während längerer Ballwechsel
-- Neon-Kanal, Ballspur, Geräusche und räumliche Anzeigetafel
+- R2-Rekalibrierung für eine bequeme individuelle Schlägerausrichtung
+- Vollständig pausierendes VR-Menü etwa 2,75 Meter vor dem Spieler
+- Pointer-Bedienung des Menüs mit dem rechten Controller und R2
+- Einstellbare Raumtiefe, Raumbreite, Raumhöhe und KI-Schwierigkeit
+- Ballkollisionen mit Position, Winkel und Geschwindigkeit des Schlägers
+- Dynamisch zunehmendes Balltempo während langer Ballwechsel
+- Geschwindigkeitsabhängige Ballfarbe, Leuchtintensität und Schweif
+- Partikeleffekte und haptisches Feedback bei Treffern
 - Match bis 7 Punkte mit mindestens 2 Punkten Vorsprung
-- Desktop-Vorschau mit Maus und Tastatur
 
 ## Quest-3-Steuerung
 
@@ -24,40 +24,37 @@ Du stehst in einem futuristischen, rechteckigen Kanal. Gegenüber befindet sich 
 | --- | --- |
 | Linker Thumbstick | Nach links und rechts bewegen |
 | Rechter Controller | Schläger räumlich bewegen und drehen |
-| A-Taste | Match neu starten |
+| R2 im Spiel halten | Schläger in neutraler Ausrichtung fixieren; Controller bequem halten |
+| R2 loslassen | Neue Schlägerausrichtung speichern |
+| A | Pause- und Einstellungsmenü öffnen |
+| R2 im Menü | Angezeigte Schaltfläche anklicken |
 
-Die körperliche Kopfbewegung bleibt durch das normale Quest-Tracking erhalten. Die künstliche Fortbewegung des Spielers ist ausschließlich seitlich.
+Beim Start einer VR-Sitzung bleibt das Spiel im Menü pausiert. Erst **SPIEL STARTEN** aktiviert Ball und KI.
+
+## Menüeinstellungen
+
+- Raumtiefe: 10,8 / 12,8 / 15,2 Meter
+- Raumbreite: 4,2 / 5,0 / 5,8 Meter
+- Raumhöhe: 2,9 / 3,45 / 4,0 Meter
+- KI: Entspannt / Normal / Experte
 
 ## Desktop-Test
 
 - Maus: Schläger bewegen
 - A/D oder Pfeiltasten: seitlich bewegen
-- R oder Leertaste: Match neu starten
-
-## Lokal starten
-
-```bash
-npm install
-npm run dev
-```
-
-Produktions-Build:
-
-```bash
-npm run build
-npm run preview
-```
+- M oder Escape: Menü öffnen
+- Leertaste: Menü schließen und starten
+- R: Match neu starten
 
 ## Meta Quest 3
 
 1. Den **Meta Quest Browser** öffnen.
 2. `https://kevni92.github.io/vr-test/` aufrufen.
 3. **ENTER VR** auswählen.
-4. Die WebXR-Berechtigung bestätigen.
-5. Mit dem linken Stick seitlich bewegen und den rechten Controller als Schläger verwenden.
+4. Im räumlichen Menü die gewünschten Einstellungen wählen.
+5. **SPIEL STARTEN** mit dem Pointer und R2 anklicken.
+6. Bei Bedarf R2 im Spiel halten, den Controller bequem ausrichten und R2 loslassen.
 
 ## Veröffentlichung
 
-Der Workflow `.github/workflows/deploy-pages.yml` baut bei jedem Push auf `main` die Anwendung und veröffentlicht den Ordner `dist` über GitHub Pages.
-
-WebXR benötigt HTTPS. GitHub Pages stellt diesen sicheren Kontext automatisch bereit.
+Der Workflow `.github/workflows/deploy-pages.yml` baut bei jedem Push auf `main` die Anwendung und veröffentlicht `dist` über GitHub Pages.

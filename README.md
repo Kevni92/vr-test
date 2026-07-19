@@ -1,33 +1,38 @@
-# Quest 3 WebXR Mini-Baukasten
+# Neon Channel VR
 
-Ein minimalistischer räumlicher Editor für **Meta Quest 3**, umgesetzt mit **Three.js**, **WebXR** und Vite. Die Anwendung läuft direkt im Meta Quest Browser; eine native APK ist für dieses Webprojekt nicht nötig.
+Ein modernes VR-Ping-Pong-Spiel für **Meta Quest 3**, umgesetzt mit **Three.js**, **WebXR** und Vite. Das Spiel läuft direkt im Meta Quest Browser und wird automatisch über GitHub Pages veröffentlicht.
+
+## Spielidee
+
+Du stehst in einem futuristischen, rechteckigen Kanal. Gegenüber befindet sich in etwa 8,7 Metern Entfernung ein KI-Bot mit eigenem Schläger. Der Ball fliegt frei durch den Kanal und prallt an Seitenwänden, Boden und Decke ab.
 
 ## Funktionen
 
-- 3D-Baumenü mit Würfel, Quader, Kugel, Zylinder, Pyramide und Dreiecksprisma
-- Freies Platzieren im Raum über den rechten Controllerstrahl
-- Greifen und Verschieben bereits platzierter Formen
-- Drehen, Skalieren, Löschen und Rückgängig
-- Einfache Bewegung mit dem linken Thumbstick
-- Desktop-Testleiste für Tests ohne Headset
-- Automatische Veröffentlichung über GitHub Pages
+- Seitliche Bewegung des Spielers; keine künstliche Vorwärts-, Höhen- oder Tiefenbewegung
+- VR-Schläger am rechten Quest-Controller
+- Ballkollisionen mit Position, Ausrichtung und Geschwindigkeit des Schlägers
+- Haptisches Feedback beim eigenen Treffer
+- KI-Gegner mit Reaktionszeit, Vorhersage und leichter Ungenauigkeit
+- Zunehmendes Balltempo während längerer Ballwechsel
+- Neon-Kanal, Ballspur, Geräusche und räumliche Anzeigetafel
+- Match bis 7 Punkte mit mindestens 2 Punkten Vorsprung
+- Desktop-Vorschau mit Maus und Tastatur
 
 ## Quest-3-Steuerung
 
 | Eingabe | Funktion |
 | --- | --- |
-| A (rechter Controller) | Baumenü öffnen/schließen |
-| Rechter Thumbstick im Menü | Form auswählen |
-| R2 / rechter Trigger | Form platzieren bzw. Menüauswahl bestätigen |
-| Rechter Grip | Anvisiertes Objekt greifen/loslassen |
-| Rechter Stick horizontal | Vorschau oder gehaltenes Objekt drehen |
-| Rechter Stick vertikal | Platzierungsabstand ändern bzw. gehaltenes Objekt kippen |
-| B | Größe der nächsten Form wechseln |
-| Linker Stick | Bewegen |
-| X | Anvisiertes Objekt löschen |
-| Y | Letzte Platzierung rückgängig machen |
+| Linker Thumbstick | Nach links und rechts bewegen |
+| Rechter Controller | Schläger räumlich bewegen und drehen |
+| A-Taste | Match neu starten |
 
-> Die Meta-Systemtaste ist für das Betriebssystem reserviert und wird WebXR-Anwendungen nicht bereitgestellt. Deshalb verwendet das Projekt die A-Taste für das eigene Menü.
+Die körperliche Kopfbewegung bleibt durch das normale Quest-Tracking erhalten. Die künstliche Fortbewegung des Spielers ist ausschließlich seitlich.
+
+## Desktop-Test
+
+- Maus: Schläger bewegen
+- A/D oder Pfeiltasten: seitlich bewegen
+- R oder Leertaste: Match neu starten
 
 ## Lokal starten
 
@@ -36,37 +41,23 @@ npm install
 npm run dev
 ```
 
-Für einen produktiven Test:
+Produktions-Build:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-WebXR benötigt einen sicheren Kontext. Lokal funktioniert `localhost`; auf der Quest wird die von GitHub Pages bereitgestellte HTTPS-Adresse verwendet.
+## Meta Quest 3
 
-## GitHub Pages
+1. Den **Meta Quest Browser** öffnen.
+2. `https://kevni92.github.io/vr-test/` aufrufen.
+3. **ENTER VR** auswählen.
+4. Die WebXR-Berechtigung bestätigen.
+5. Mit dem linken Stick seitlich bewegen und den rechten Controller als Schläger verwenden.
 
-Der Workflow `.github/workflows/deploy-pages.yml` baut bei jedem Push auf `main` die Vite-Anwendung und veröffentlicht `dist` über GitHub Pages.
+## Veröffentlichung
 
-Falls Pages beim ersten Lauf noch nicht freigeschaltet ist:
+Der Workflow `.github/workflows/deploy-pages.yml` baut bei jedem Push auf `main` die Anwendung und veröffentlicht den Ordner `dist` über GitHub Pages.
 
-1. Repository **Settings → Pages** öffnen.
-2. Unter **Build and deployment** als Quelle **GitHub Actions** wählen.
-3. Den Workflow unter **Actions → Deploy GitHub Pages** erneut starten.
-
-Danach lautet die Standardadresse:
-
-`https://kevni92.github.io/vr-test/`
-
-## Auf der Meta Quest 3 öffnen
-
-1. Quest 3 mit dem WLAN verbinden.
-2. **Meta Quest Browser** öffnen.
-3. `https://kevni92.github.io/vr-test/` aufrufen.
-4. Unten auf **ENTER VR** drücken.
-5. Die WebXR-Abfrage bestätigen und die Controller verwenden.
-
-## Technischer Hinweis zum Meta SDK
-
-Das native **Meta XR SDK** richtet sich an native Anwendungen, beispielsweise Unity-/Unreal-Projekte oder Android-Apps. Eine Website nutzt auf der Quest stattdessen die vom Meta Quest Browser bereitgestellte **WebXR-Schnittstelle**. Three.js bindet diese Schnittstelle über `WebXRManager`, `VRButton` und die standardisierten XR-Controllerdaten ein.
+WebXR benötigt HTTPS. GitHub Pages stellt diesen sicheren Kontext automatisch bereit.

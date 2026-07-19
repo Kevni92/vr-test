@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#030714" />
-    <meta name="description" content="Neon Channel – ein modernes WebXR-Ping-Pong-Spiel für Meta Quest 3." />
+    <meta name="theme-color" content="#02040c" />
+    <meta name="description" content="Neon Channel – futuristisches WebXR-Ping-Pong für Meta Quest 3." />
     <title>Neon Channel VR Ping-Pong</title>
   </head>
   <body>
@@ -12,27 +12,26 @@
       <section class="intro" aria-label="Spielinformationen">
         <p class="eyebrow">Three.js · WebXR · Meta Quest 3</p>
         <h1>Neon Channel</h1>
-        <p>Futuristisches VR-Ping-Pong mit dynamischem Neonkanal, KI-Gegner und frei justierbarem Schläger.</p>
+        <p>VR-Ping-Pong in einer durchgehend verbundenen Neon-Arena vor einem lebendigen Weltraumhintergrund.</p>
         <div class="controls">
-          <span><b>Linker Stick</b> links / rechts / hoch / runter</span>
-          <span><b>Rechte Hand</b> Schläger</span>
+          <span><b>Linker Stick</b> links / rechts + hoch / runter</span>
+          <span><b>Fix-Modus</b> Höhe automatisch zentrieren</span>
           <span><b>R2 halten</b> Schläger justieren</span>
-          <span><b>A</b> Menü öffnen</span>
-          <span><b>Fix-Modus</b> Spieler zentrieren</span>
+          <span><b>A</b> Pause / Einstellungen</span>
         </div>
       </section>
 
       <section class="score-hud" aria-label="Spielstand">
         <div><small>DU</small><strong id="score-player">0</strong></div>
-        <p id="game-status">Menü · Rally 0</p>
+        <p id="game-status">Startmenü · Rally 0</p>
         <div><small>BOT</small><strong id="score-bot">0</strong></div>
       </section>
 
       <section class="desktop-actions" aria-label="Desktop-Steuerung">
-        <button id="pause-button" class="pause" type="button">Pause / Einstellungen</button>
-        <button id="restart-button" class="restart" type="button">Neues Match</button>
+        <button id="pause-button" class="pause" type="button">Spiel starten</button>
+        <button id="restart-button" class="restart" type="button">Match neu starten</button>
       </section>
     </main>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main-v2.js"></script>
   </body>
 </html>

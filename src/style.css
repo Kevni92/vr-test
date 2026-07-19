@@ -1,0 +1,63 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #07101e;
+  color: #eef6ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: radial-gradient(circle at top, #17345a 0%, #07101e 55%); }
+canvas { position: fixed; inset: 0; display: block; }
+
+.intro {
+  position: fixed;
+  z-index: 2;
+  top: 1.2rem;
+  left: 1.2rem;
+  width: min(31rem, calc(100vw - 2.4rem));
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(5, 13, 25, 0.76);
+  backdrop-filter: blur(16px);
+  pointer-events: none;
+}
+
+.eyebrow { margin: 0 0 .35rem; color: #73e2ff; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2.4rem); }
+.intro > p:not(.eyebrow) { margin: .45rem 0 .85rem; color: #b8c7da; }
+.controls { display: flex; flex-wrap: wrap; gap: .45rem; }
+.controls span { padding: .35rem .55rem; border-radius: .55rem; background: rgba(255,255,255,.07); color: #cbd9ea; font-size: .78rem; }
+.controls b { color: #fff; }
+
+.toolbar {
+  position: fixed;
+  z-index: 3;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: end;
+  gap: .55rem;
+  padding: .65rem;
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: .9rem;
+  background: rgba(5, 13, 25, .82);
+  backdrop-filter: blur(16px);
+}
+
+.toolbar label { display: grid; gap: .25rem; color: #a9bad0; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; }
+button, select { min-height: 2.5rem; border: 1px solid rgba(255,255,255,.16); border-radius: .65rem; background: #14243a; color: #fff; padding: 0 .8rem; font: inherit; cursor: pointer; }
+button:hover, select:hover { background: #1c3454; }
+button.primary { border-color: #69d8ff; background: #16678c; }
+
+#VRButton { border-radius: .7rem !important; font-family: inherit !important; font-weight: 800 !important; }
+
+@media (max-width: 700px) {
+  .intro { padding: .85rem; }
+  .controls { display: none; }
+  .toolbar { width: calc(100vw - 1.2rem); overflow-x: auto; justify-content: flex-start; }
+  .toolbar > * { flex: 0 0 auto; }
+}

@@ -1,6 +1,6 @@
 {
-  "name": "quest-3-webxr-builder",
-  "version": "0.1.0",
+  "name": "neon-channel-vr",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {

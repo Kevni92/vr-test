@@ -3,36 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09111f" />
-    <title>Quest 3 WebXR Baukasten</title>
+    <meta name="theme-color" content="#050916" />
+    <meta name="description" content="Neon Channel – ein modernes WebXR-Ping-Pong-Spiel für Meta Quest 3." />
+    <title>Neon Channel VR Ping-Pong</title>
   </head>
   <body>
     <main id="app">
-      <section class="intro" aria-label="Projektinformationen">
+      <section class="intro" aria-label="Spielinformationen">
         <p class="eyebrow">Three.js · WebXR · Meta Quest 3</p>
-        <h1>VR Mini-Baukasten</h1>
-        <p>Starte VR und baue mit den Quest-Controllern frei im Raum.</p>
+        <h1>Neon Channel</h1>
+        <p>VR-Ping-Pong in einem futuristischen Kanal. Bewege dich seitlich und schlage den Ball mit dem rechten Schläger zurück.</p>
         <div class="controls">
-          <span><b>A</b> Menü</span>
-          <span><b>R2</b> Platzieren</span>
-          <span><b>Grip</b> Greifen</span>
-          <span><b>Stick</b> Drehen / Abstand</span>
-          <span><b>B</b> Größe</span>
-          <span><b>X</b> Löschen</span>
-          <span><b>Y</b> Rückgängig</span>
+          <span><b>Linker Stick</b> links / rechts</span>
+          <span><b>Rechte Hand</b> Schläger</span>
+          <span><b>A</b> Match neu starten</span>
+          <span><b>Ziel</b> 7 Punkte, zwei Punkte Vorsprung</span>
         </div>
       </section>
 
-      <section id="desktop-toolbar" class="toolbar" aria-label="Desktop-Teststeuerung">
-        <label>
-          Form
-          <select id="shape-select"></select>
-        </label>
-        <button id="rotate-left" type="button">↺ Drehen</button>
-        <button id="rotate-right" type="button">↻ Drehen</button>
-        <button id="scale-button" type="button">Größe</button>
-        <button id="place-button" type="button" class="primary">Platzieren</button>
+      <section class="score-hud" aria-label="Spielstand">
+        <div><small>DU</small><strong id="score-player">0</strong></div>
+        <p id="game-status">Bereit · Rally 0</p>
+        <div><small>BOT</small><strong id="score-bot">0</strong></div>
       </section>
+
+      <button id="restart-button" class="restart" type="button">Match neu starten</button>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>
